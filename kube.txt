@@ -1,0 +1,193 @@
+kubectl get services --namespace something-system
+kubectl get pods --all-namespaces
+kubectl get pods --namespace something-workers
+kubectl logs calculate-bboxes-6fc77948b9-bx8mn --namespace something-workers
+kubectl get pods --namespace something-workers
+kubectl config get-contexts
+kubectl --context something-node get nodes
+
+// Clean up pods
+kubectl get pods -n something-workers --no-headers=true | awk '/deepfigs-boundingboxes.*/{print $1}' | xargs kubectl -n something-workers delete pod
+
+// Describe deployment problem
+kubectl describe deployment something-nodename --namespace playgrounds
+kubectl describe deployment.apps something-nodename --namespace playgrounds
+
+kubectl describe services deployment-name --namespace some-namespace
+kubectl describe pods neo4j-deployment --namespace playgrounds
+kubectl get deployments --namespace playgrounds
+kubectl get deployments --all-namespaces
+
+// Add service to existing port on deployment
+kubectl expose deployment/neo4j-deployment --namespace playgrounds
+kubectl get svc neo4j-deployment --namespace playgrounds
+
+// Pod memory usage issues
+"just luck/wandering really, I have looked on something-node-cpu where the pod is running and in the log file /var/log/kern.log it has many entries as below
+Memory cgroup out of memory: Kill process 31183 (prometheus) score 2008 or sacrifice child
+then this command "docker stats --no-stream" shows the pod hitting it limits..."
+
+// Get pod names
+kubectl get pods --template '{{range .items}}{{.metadata.name}}{{"\n"}}{{end}}' --all-namespaces --context something-node
+kubectl get pods --template '{{range .items}}{{.metadata.name}}{{"\n"}}{{end}}' --all-namespaces --context local
+
+// Scale deployments
+kubectl scale deploy -n <namespace> --replicas=0 --all 
+kubectl scale deploy -n something-system --replicas=0 --all
+
+// Show spec for nodes
+kubectl get nodes -o json | jq '.items[].spec'
+
+// Show taints for nodes
+kubectl get nodes -o json | jq '.items[].spec.taints'
+
+// Add taint toleration to service/daemonset/deployment
+// See https://kubernetes.io/docs/concepts/workloads/controllers/daemonset/#taints-and-tolerations
+// & https://kubernetes.io/docs/concepts/scheduling-eviction/taint-and-toleration/
+// & https://banzaicloud.com/blog/k8s-taints-tolerations-affinities/
+// Tolerations work a bit counter intuitively. If you have a toleration then it means the pod
+// will schedule to it.
+// Note that daemonsets will schedule to a tainted pod.
+tolerations:
+- key: "node.kubernetes.io/unschedulable"
+  operator: "Exists"
+  effect: "NoSchedule"
+
+Also "NoExcecute" to boot pods off nodes that acquire a taint
+
+
+// To not schedule a pod/daemonset/whatever on a particular node you can add pod affinity
+
+    spec:
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+            - matchExpressions:
+              - key: kubernetes.io/hostname
+                operator: NotIn
+                values:
+                - something-node-cpu
+
+// Port forward a pod from 8080 local to 80 on the pod
+kubectl port-forward a-web-service-5f46cfc8dc-c78rp 8080:8080 --namespace a-web-service
+
+// Cluster DNS
+<service>.<namespace>.svc.cluster.local
+
+// Troubleshoot nodes
+kubectl describe node something-node-cpu
+kubectl --context something-node get nodes
+
+// Pods on a node
+kubectl get pods --all-namespaces -o wide --field-selector  spec.nodeName=something-node-cpu
+
+// Describe a node
+kubectl describe node something-node-cpu
+
+// Events for a node
+kubectl get events --all-namespaces -o wide | grep -i something-node-cpu
+
+// Events for a pod
+kubectl get event --namespace abc-namespace --field-selector involvedObject.name=my-pod-wgsf
+
+// Run cron job immediately
+kubectl create job --from=cronjob/clinvar-updater --namespace something clinvar-updater-test
+
+// Check what volume drivers are in play
+// There could be errors in the kubelet logs (docker logs kubelet on the appropriate worker node for rancher).
+// eg longhorn
+// see /var/lib/kubelet/plugins_registry & delete drivers you don't need after checking that there are no PVs
+kubectl get pv --output=jsonpath="{.items[?(@.spec.csi.driver==\"io.rancher.longhorn\")].spec.csi.volumeHandle}"
+
+// Nodes on pod
+kubectl get pods --all-namespaces -o wide --field-selector spec.nodeName=something-node-cpu
+
+// CSI contaisomething storage interface drivers
+kubectl get csidriver --all-namespaces
+// or??
+kubectl get csidrivers.storage.k8s.io --all-namespaces
+
+// Cluster status
+kubectl cluster-info dump
+
+// Memory limits
+kubectl apply -f memory-limit-range.yaml -n something
+kubectl get limitrange -n something -o yaml
+
+// Namespace info
+kubectl describe ns (-n my-namespace)
+
+// Get Replica Sets
+kubectl get rs -n something
+
+// Get CronJobs
+kubectl get cronjobs -n something
+
+// Describe a cronjob
+kubectl describe cronjob/job-name-test -n proteind
+
+// Get specific cron job (to see status etc in single line)
+kubectl get cronjob something2-test -n something
+
+// Watch all cron jobs
+kubectl get jobs --watch -n something
+
+// Edit a cron job
+kubectl edit cronjob/something2-test -n something
+
+// Apply limit range
+kubectl apply -f cpu-memory-limit.yml -n something-resolver
+
+// Edit limit range
+kubectl edit limitrange -n something-resolver
+
+// Scale specific deployment in namespace
+kubectl scale deploy -n something --replicas=0 redis-something-data
+
+// Scale all deployments in namespace
+kubectl scale deploy -n something --replicas=0 --all
+
+// pod terminal session
+kubectl exec -n nexus --stdin --tty pod-6557cc4546-s99sz -- /bin/bash
+
+
+// Recently terminated pods (within ttl ~ 1hr)
+kubectl get event --all-namespaces -o custom-columns=NAME:.metadata.name | cut -d "." -f1
+
+// Decode registry secret
+kubectl get secrets/gitlab-registry -o json | jq '.data | map_values(@base64d)'
+Something like the following for username/password style secrets
+kubectl get secrets/db-user-pass --template={{.data.password}} | base64 -D
+Use kubectl describe secrets/db-user-pass to see what the format is first for the .data.password bit
+
+// CPU & memory usage for all pods
+kubectl top pods -A
+
+// Node usage (actual not limit or requests)
+kubectl top nodes
+
+// Memory limit for all pods
+kubectl get pods --all-namespaces  -o=jsonpath="{range .items[*]}{.metadata.namespace}:{.metadata.name}{'\n'}{range .spec.contaisomethings[*]} {.name}:{.resources.limits.memory}{'\n'}{end}{'\n'}{end}"
+
+// CPU limit for all pods
+kubectl get pods --all-namespaces  -o=jsonpath="{range .items[*]}{.metadata.namespace}:{.metadata.name}{'\n'}{range .spec.contaisomethings[*]} {.name}:{.resources.limits.cpu}{'\n'}{end}{'\n'}{end}"
+
+// Autoscale
+kubectl autoscale deployment spreadsheet-converter --cup-percent=50 min=1 max=10 --namespace something-workers
+kubectl delete hpa spreadsheetconverter --namespace something-workers  
+kubectl get hpa --namespace something-workers
+
+// Get ingress controller conf
+kubectl exec -it -n ingress-nginx ingress-nginx-controller-hql6k -- cat /etc/nginx/nginx.conf
+
+// Get service accounts ie users (on kubecluster)
+kubectl get serviceAccounts -n kube-system
+
+// Create secret token for user access (for kube config file)
+kubectl create token miguel-amaral -n kube-system
+
+// Renew control plane certs
+kubeadm certs renew all
+//Check certs with
+openssl x509 -in /etc/kubernetes/pki/apiserver.crt -noout -text |grep ' Not '

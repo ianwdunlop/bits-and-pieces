@@ -1,0 +1,44 @@
+View all services
+
+>systemctl list-unit-files | grep enabled
+
+View logs for a service
+
+>sudo journalctl -u mongod.service
+
+What OS
+>uname -m && cat /etc/*release
+>lsb_release -a
+
+GPUs
+>nvidia-smi
+>lspci | grep -i nvidia
+
+Package update times
+https://www.cyberciti.biz/faq/debian-ubuntu-linux-find-package-installed-updated-date/
+>grep upgrade /var/log/dpkg.log
+>grep remove /var/log/dpkg.log
+>grep installed /var/log/dpkg.log
+
+Package version
+>sudo apt list --installed | grep containerd
+
+Installed Packages
+>cat /var/log/dpkg.log | grep " install "
+
+Runc issues for PLEG on k8s nodes
+>ps -ef | grep '[r]unc init' | awk '{ print $2 }' | xargs -I'{}' sudo strace -p '{}' -s256 -e write
+>docker ps -a | tr -s " " | cut -d " " -f1 | xargs -Iarg sh -c 'echo arg; docker inspect arg> /dev/null'
+Then on node command sticks at do:
+>docker ps
+
+Last reboot/shutdown time
+>last reboot | head -1
+>last -x|grep shutdown | head -1
+
+List all cert authorities
+awk -v cmd='openssl x509 -noout -subject' '
+    /BEGIN/{close(cmd)};{print | cmd}' < /etc/ssl/certs/ca-certificates.crt
+
+Show certs for endpoint
+openssl s_client -showcerts -connect the-git-server:443

@@ -1,0 +1,20 @@
+// List queues
+./rabbitmqadmin -f long -d 3 -u something -p something list queues
+
+// Read top message from queue
+./rabbitmqadmin -f long -d 3 -u something -p something get queue=some_queuename ackmode=ack_requeue_false
+
+// Create queue
+./rabbitmqadmin -u something -p something declare queue name=some_queuename durable=true
+
+// Purge all queues
+./rabbitmqadmin -u something -p something list queues | cut -d '|' -f 2 | sed -e 's/ //g' | xargs -n1 -I@ ./rabbitmqadmin -u something -p something purge queue name=@
+
+// Delete queue
+./rabbitmqadmin -u something -p something delete queue name=some_queuename
+
+// Delete all queues
+rabbitmqadmin -u something -p something list queues | cut -d '|' -f 2 | sed -e 's/ //g' | xargs -n1 -I@ ./rabbitmqadmin -u something -p something delete queue name=@
+
+// Performance tests
+bin/runjava com.rabbitmq.perf.PerfTest --uri "amqp://username:password@machinename/something" --id "something-test" -f persistent -q 10 -pmessages 10000000 --variable-rate 200:60 --variable-rate 1000:10 --variable-rate 500:15 --json-body --size 1000 --variable-latency 1000:60 --variable-latency 10000:15 --queue-pattern 'something-test-%d' --queue-pattern-from 1 --queue-pattern-to 15 --consumers 20 --producers 20 -z 18000
